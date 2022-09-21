@@ -1,0 +1,1 @@
+cmd_/usr/src/hw3-cse506g09/CSE-506/jobasync.ko := ld -r -m elf_x86_64  -z max-page-size=0x200000  --build-id  -T ./scripts/module-common.lds -o /usr/src/hw3-cse506g09/CSE-506/jobasync.ko /usr/src/hw3-cse506g09/CSE-506/jobasync.o /usr/src/hw3-cse506g09/CSE-506/jobasync.mod.o;  true

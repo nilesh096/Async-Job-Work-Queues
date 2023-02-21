@@ -12,7 +12,7 @@ Job operations to collect job status /modify jobs.
 
 Executing Jobs
  
-1. Job submission - Workqueue and the work item
+# 1. Job submission - Workqueue and the work item
 
 To run the jobs asynchronously we referred to the concurrency managed workqueue (cmwq) implemented in the linux kernel. The workqueues manage a pool of workers that get scheduled on each CPU and a list of work items to be assigned to these workers. The workqueues takes care of managing the concurrency level of the work items/jobs, queing work items to be executed in FIFO order and providing support for canceling and maintaining status for each work item. Hence, we decided to use the in-built linux kernel workqueues instead of building a producer-consumer queuing system from scratch. 
 
@@ -33,7 +33,7 @@ struct job_ctx {
 
 Job arguments structure (struct job_data) -
 
-struct job_data {
+    struct job_data {
 
     unsigned int job_id; // Job id 
 
@@ -56,10 +56,10 @@ struct job_data {
     bool is_poll; // bool to check if we are polling or writing to file
 
     char* result_fname; // result filename where we write to for polling/writing to file
-};
+    };
 
 
-2. Job Types Supported 
+# 2. Job Types Supported 
 
      2.1 Encryption Decryption	
      We are using md5 for hashing the user password and passing it to the kernel. The preamble is the sha256 hash of the md5 hash. The md5 hash is used for encryption and decryption of the file. The mda5 hash is hashed to verify with the content of the preamble. 
@@ -82,7 +82,7 @@ struct job_data {
      2.7 Concatenate 2 or more files
      For concatenation we loop through each input file in the array and append the content to the output file.
 
-Help command  -
+# Help command  -
 
 USAGE for submitting task: ./xhw3 [-h] [-t TASK_NUMBER] [-i INPUT_FILES] [-o OUTPUT_FILES] [-e PASSWD] -p|[-w RESULT_FILE]
    -h        Help: displays help menu.
@@ -96,20 +96,20 @@ USAGE for submitting task: ./xhw3 [-h] [-t TASK_NUMBER] [-i INPUT_FILES] [-o OUT
    -p        Polling for results
    -w        Filename for writing job results
 
-3. Job Results
+# 3. Job Results
 
 The results of the job and the status can be viewed by the user using either polling or through the results being written to a file. This is used for returning results of job related operations (getting job status, canceling job etc) as well as getting the results of the task/job itself. 
 
-   3.1 Polling 
+   # 3.1 Polling 
     We use the poll(2) system call as an interprocess communication between the kernel and the userland process by writing to / reading from a FIFO file. The FIFO file is created in userland and the name of the file is passed to the kernel. The job running asynchronously will write to the FIFO file. The same file is opened in read mode in a pthread created in the userland. The poll system call will block for events (POLLIN event in our case) on the FIFO file. On receiving the event the content of the file will be read and printed to the terminal. The poller (pthread for polling) is created for each job submitted by the user through the system call. In the kernel we write meaningful messages which convey intermediate results of the job, any failures and final success message of the job. Once the file is closed in the kernel (one end of the FIFO pipe is closed), the poll system call will get aß POLLHUP event, which will end the polling process and successfully return. We also keep a timeout of 30 seconds in the poll system call. If no event happens, the thread will return. 
 
-     3.2 Writing results to a file
+   # 3.2 Writing results to a file
       Users can also provide a file to which the results are written. The jobs will open the file and write intermediate results, failures and successful completion messages to a file. 
 
 
-Job Operations 
+# Job Operations 
 
-1. Hashtable for managing jobs 
+# 1. Hashtable for managing jobs 
 
 To collect job related information like job status, listing of  jobs, canceling and reordering of jobs we make use of a hashtable in the kernel which uses job id as the key. The hashtable is implemented using chaining, with a link list for each bucket. We initialize a hashtable with 1024 buckets. The hashtable nodes in the link list are contained in a container having job context pointer and job id. The hashtable resources are freed when we unload the module using rmmod.
 
@@ -123,30 +123,30 @@ struct job_index_table {
 
 Our choice for using a hashtable is that it is in-memory and efficient. We also considered writing the status and job ids to files. But this approach would slow down the process due to the expensive IO operations. 
 
-2. Job Operations supported 
+# 2. Job Operations supported 
 
-2.1 Job status
+# 2.1 Job status
 
 To collect job status for a particular job id, we iterate through the hashtable and check if the job id in the container of the node matches the job id provided. The user id is also checked, so only  valid users are allowed to check their job statuses. The root users can check any job status, whereas other users can check only their job statuses. We use the work_busy and work_pending methods on the work structure stored in the job context pointer. These methods will return a boolean value indicating whether the job is EXECUTING or PENDING(waiting in the queue). If the job has completed, we can check whether it succeeded or failed using the job status enum variable stored in the job context. 
 
-2.2 Listing Jobs
+# 2.2 Listing Jobs
 
 Similarly for listing the jobs,  we loop through every bucket in the hashtable and list all the job ids. The jobs belonging to the user are only returned. 
 
-2.3 Canceling Jobs
+# 2.3 Canceling Jobs
 
 For canceling of the job we iterate through the hashtable and check if the job id in the container of the node matches the job id provided.The user id is also checked, so only valid users are allowed to cancel the job. A job is canceled only if it is in PENDING state. The node in the hashtable is also deleted and resources for the job are freed. 
 
-2.4 Reordering Jobs
+# 2.4 Reordering Jobs
 
 Jobs can either run as a high priority job or as a normal job. Users can provide a job priority of 0 or 1 to set priority of existing jobs. A job priority of 0 means it should be submitted to the normal work pool for execution and a priority of 1 means it should be submitted to the high priority work pool. For this reordering we cancel the job if it is in PENDING state and queue it to the work queue designated for that priority (for instance, 0-normal workqueue, 1-high priority workqueue).
 
-2.5 Throttling Jobs
+# 2.5 Throttling Jobs
 
 We only allow 20 work items to be pending in the queue. Queuing and Dequeuing of jobs is synchronized using a mutex lock and a volatile counter. Once a counter reaches a MAX_QUEUE_SIZE we do not permit the work to be queued. 
 
 
-Help command -
+# Help command -
 
 USAGE for job operations: ./xhw3 [-h] [-j JOB_OPERATION] [-n JOB_ID] [-r JOB_PRIORITY] -p|[-w RESULT_FILE]
    -h        Help: displays help menu.
